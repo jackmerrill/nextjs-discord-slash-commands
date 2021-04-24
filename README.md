@@ -4,6 +4,9 @@ Discord Slash Commands created with Next.js API Routing.
 
 Requires commands to be created already, I used Postman to create them with simple POST requests.
 
+## Example
+![Image](https://this-u.lol/51yx9b.gif)
+
 ## Installation 
 
 Download the Repository
