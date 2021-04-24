@@ -1,6 +1,7 @@
 /* eslint-disable default-case */
 import { NextApiRequest, NextApiResponse } from 'next';
 import nacl from 'tweetnacl';
+import getRawBody from 'raw-body';
 
 interface SlashCommandResponse {
     type: number,
@@ -36,38 +37,61 @@ interface SlashCommandResponse {
     channel_id: string
 }
 
-export default (req: NextApiRequest, res: NextApiResponse) => {
-  const { PUBLIC_KEY } = process.env;
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
 
-  const signature = req.headers['X-Signature-Ed25519'];
-  const timestamp = req.headers['X-Signature-Timestamp'];
-  const { body } = req;
+export default async (req: NextApiRequest, res: NextApiResponse) => {
+  if (!req.body) {
+    let body;
+    try {
+      body = await getRawBody(req, {
+        encoding: true
+      })
+    } catch (e) {
+      console.error(e)
+    }
+    const signature = req.headers['x-signature-ed25519'];
+    const timestamp = req.headers['x-signature-timestamp'];
 
-  const isVerified = nacl.sign.detached.verify(
-    Buffer.from(timestamp + body),
-    Buffer.from(signature as string, 'hex'),
-    Buffer.from(PUBLIC_KEY as string, 'hex'),
-  );
+    if (!signature) {
+      return res.status(401).end('invalid request signature');
+    }
+    
+    if (!timestamp || !body) {
+      return res.status(401).end('no timestamp or body');
+    }
 
-  if (!isVerified) {
-    return res.status(401).end('invalid request signature');
-  }
+    const isVerified = nacl.sign.detached.verify(
+      Buffer.from(timestamp + body),
+      Buffer.from(signature as string, 'hex'),
+      Buffer.from(process.env.PUBLIC_KEY as string, 'hex'),
+    );
 
-  if (req.body.type === 1) {
-    res.json({
-      type: 1,
-    });
-  } else {
-    const command = body as SlashCommandResponse;
+    if (!isVerified) {
+      return res.status(401).end('invalid request signature');
+    }
 
-    switch (command.data.name) {
-      case 'ping': {
-        res.json({
-          type: 4,
-          data: {
-            content: 'Pong!',
-          },
-        });
+    const parsedBody = JSON.parse(body)
+
+    if (parsedBody.type === 1) {
+      res.json({
+        type: 1,
+      });
+    } else {
+      const command = parsedBody as SlashCommandResponse;
+
+      switch (command.data.name) {
+        case 'ping': {
+          res.json({
+            type: 4,
+            data: {
+              content: 'Pong!',
+            },
+          });
+        }
       }
     }
   }
