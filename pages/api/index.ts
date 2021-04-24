@@ -14,12 +14,12 @@ interface SlashCommandResponse {
             public_flags: string
         },
         roles: string[],
-        premium_since: Date?,
+        premium_since: Date | null,
         permissions: string,
         pending: boolean,
-        nick: string?,
+        nick: string | null,
         mute: boolean,
-        joined_at: Date,
+        joined_at: Date | null,
         is_pending: boolean,
         deaf: boolean
     },
